@@ -108,6 +108,19 @@ else()
   else()
     set(HAVE_EXYNOS_API 0)
   endif()
+
+  # Exynos
+  if (${HAVE_TEGRA_API})
+    set(LIB_INFO "${LIB_INFO}, 'Tegra'")
+    set(HAVE_TEGRA_API 1)
+    set(CEC_SOURCES_ADAPTER_TEGRA adapter/Tegra/TegraCECAdapterDetection.cpp
+                                   adapter/Tegra/TegraCECAdapterCommunication.cpp)
+    source_group("Source Files\\adapter\\Tegra" FILES ${CEC_SOURCES_ADAPTER_EXYNOS})
+    list(APPEND CEC_SOURCES ${CEC_SOURCES_ADAPTER_EXYNOS})
+  else()
+    set(HAVE_TEGRA_API 0)
+  endif()
+
 endif()
 
 # rt

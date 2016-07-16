@@ -102,7 +102,7 @@ static int cb_cec_log_message(void* lib, const cec_log_message message)
       break;
     }
 
-    printf("%s[%16lld]\t%s\n", strLevel, message.time, message.message);
+    printf("%s[%16ld]\t%s\n", strLevel, message.time, message.message);
   }
 
   return 1;

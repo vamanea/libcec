@@ -44,6 +44,12 @@ else()
   message(STATUS "Exynos support:                         no")
 endif()
 
+if (HAVE_TEGRA_API)
+  message(STATUS "Tegra support:                          yes")
+else()
+  message(STATUS "Tegra support:                          no")
+endif()
+
 if (HAVE_PYTHON)
   message(STATUS "Python support:                         version ${PYTHONLIBS_VERSION_STRING} (${PYTHON_VERSION})")
 else()
