@@ -87,6 +87,9 @@ set(CEC_HEADERS devices/CECRecordingDevice.h
                 adapter/Exynos/ExynosCEC.h
                 adapter/Exynos/ExynosCECAdapterDetection.h
                 adapter/Exynos/ExynosCECAdapterCommunication.h
+                adapter/Tegra/TegraCECDev.h
+                adapter/Tegra/TegraCECAdapterDetection.h
+                adapter/Tegra/TegraCECAdapterCommunication.h
                 adapter/Pulse-Eight/USBCECAdapterMessageQueue.h
                 adapter/Pulse-Eight/USBCECAdapterCommunication.h
                 adapter/Pulse-Eight/USBCECAdapterCommands.h
@@ -142,6 +145,7 @@ list(APPEND CEC_SOURCES ${CEC_HEADERS}
                         ${CEC_SOURCES_ADAPTER_P8}
                         ${CEC_SOURCES_DEVICES}
                         ${CEC_SOURCES_IMPLEMENTATIONS}
+                        ${CEC_SOURCES_ADAPTER_TEGRA}
                         ${CEC_SOURCES_PLATFORM})
 
 # write env.h

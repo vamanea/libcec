@@ -38,6 +38,12 @@ else()
   message(STATUS "Exynos support:                         no")
 endif()
 
+if (HAVE_TEGRA_API)
+  message(STATUS "Tegra support:                          yes")
+else()
+  message(STATUS "Tegra support:                          no")
+endif()
+
 if (HAVE_DRM_EDID_PARSER)
   message(STATUS "DRM support:                            yes")
 else()
