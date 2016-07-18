@@ -148,7 +148,7 @@ cec_adapter_message_state TegraCECAdapterCommunication::Write(
 
     if(errno == ECONNRESET || errno == EHOSTUNREACH){
       LIB_CEC->AddLog(CEC_LOG_TRAFFIC, "%s: Write OK But Not ACKED (%s)", __func__, strerror(errno));
-      return ADAPTER_MESSAGE_STATE_SENT_NOT_ACKED;
+      return ADAPTER_MESSAGE_STATE_ERROR;
     } else {
       LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Write Error (%s)", __func__, strerror(errno));
       return ADAPTER_MESSAGE_STATE_ERROR;
@@ -193,18 +193,20 @@ bool TegraCECAdapterCommunication::SetLogicalAddresses(const cec_logical_address
   uint16_t pri = addresses.primary;
   char addr[8];
 
-  sprintf(addr, "%u", pri);
+  pri = 0xf;
+  sprintf(addr, "0x%x", pri);
 
-  fdAddr = open(TEGRA_ADDR_PATH, O_RDWR);
+  int fdAddr = open(TEGRA_ADDR_PATH, O_RDWR);
 
   if (fdAddr < 0){
     LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Failed To Open Tegra Logical Address Node", __func__);
-    close(fd);
+    close(fdAddr);
     return false;
-  }   
+  }
 
-
-  if(write(fdAddr,addr,strlen(addr)) < 0){
+  LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Setting logical addr to %s", __func__, addr);
+ 
+  if(write(fdAddr,addr,strlen(addr) + 1) < 0){
     LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Failed write to logical address node (%s) (%s)", __func__,strerror(errno), addr);
     close(fdAddr);
     return false;
@@ -219,10 +221,16 @@ bool TegraCECAdapterCommunication::SetLogicalAddresses(const cec_logical_address
 
 void TegraCECAdapterCommunication::HandleLogicalAddressLost(cec_logical_address UNUSED(oldAddress))
 {
-  //Tegra always listens on broadcast so no need to handle this
 }
 
-
+string bufToString(uint8_t *buf, size_t size)
+{                                                                                         
+  string dataStr;
+  for (uint8_t iPtr = 0; iPtr < size; iPtr++)                          
+    dataStr += StringUtils::Format(":%02x", (unsigned int)buf[iPtr]);      
+  return dataStr;                                                                         
+}                                                                                         
+  
 void *TegraCECAdapterCommunication::Process(void)
 {
   unsigned char opcode;
@@ -233,14 +241,18 @@ void *TegraCECAdapterCommunication::Process(void)
 
     int8_t isNotEndOfData = 1;
     unsigned char buffer[2] = {0,0};
+    uint8_t buf[128];
+    size_t buf_siz = 0;
     cec_command cmd;
 
     if (read(fd,buffer,2) < 0){
         LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Failed To Read From Tegra CEC Device", __func__);
+        continue;
     }
 
     initiator = cec_logical_address(buffer[0] >> 4);
-    destination = cec_logical_address(buffer[0] & 0x0f);
+    destination = cec_logical_address(buffer[0] & 0xf);
+    buf[buf_siz++] = buffer[0];
 
     if ((buffer[1] & 0x01) > 0){
       isNotEndOfData = 0;
@@ -250,12 +262,13 @@ void *TegraCECAdapterCommunication::Process(void)
 
       if (read(fd,buffer,2) < 0){
         LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Failed To Read From Tegra CEC Device", __func__);
-      }
- 
-      opcode = buffer[0];
-      cec_command::Format(cmd, initiator, destination, cec_opcode(opcode));
-      if ((buffer[1] & 0x01) > 0){
-        isNotEndOfData = 0;
+      } else {
+        buf[buf_siz++] = buffer[0];
+        opcode = buffer[0];
+        cec_command::Format(cmd, initiator, destination, cec_opcode(opcode));
+        if ((buffer[1] & 0x01) > 0){
+          isNotEndOfData = 0;
+        }
       }
     } else {
       cec_command::Format(cmd, initiator, destination, CEC_OPCODE_NONE);
@@ -265,17 +278,17 @@ void *TegraCECAdapterCommunication::Process(void)
 
       if (read(fd,buffer,2) < 0){
         LIB_CEC->AddLog(CEC_LOG_ERROR, "%s: Failed To Read From Tegra CEC Device", __func__);
-      }
-
-      cmd.parameters.PushBack(buffer[0]);
-
-      if ((buffer[1] & 0x01) > 0){
-        isNotEndOfData = 0;
+      } else {
+        buf[buf_siz++] = buffer[0];
+        cmd.parameters.PushBack(buffer[0]);
+        if ((buffer[1] & 0x01) > 0){
+          isNotEndOfData = 0;
+        }
       }
 
     }
 
-    //LIB_CEC->AddLog(CEC_LOG_TRAFFIC, "%s: Reading Data Len : %i", __func__, cmd.parameters.size);
+    LIB_CEC->AddLog(CEC_LOG_TRAFFIC, "%s: Reading Data Len : %i %s", __func__, buf_siz, bufToString(buf, buf_siz).c_str());
     if (!IsStopped())
       m_callback->OnCommandReceived(cmd);
   }
